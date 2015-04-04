@@ -4,7 +4,7 @@ Daemon::Device - Forking daemon device construct
 
 # VERSION
 
-version 1.000
+version 1.01
 
 [![Build Status](https://travis-ci.org/gryphonshafer/Daemon-Device.svg)](https://travis-ci.org/gryphonshafer/Daemon-Device)
 [![Coverage Status](https://coveralls.io/repos/gryphonshafer/Daemon-Device/badge.png)](https://coveralls.io/r/gryphonshafer/Daemon-Device)
@@ -58,6 +58,16 @@ functionality for the daemon itself, and it manages the spawning and
 monitoring of the children. It also provides some hooks into various parts of
 the daemon's lifecycle.
 
+The basic idea is that you'll end up with program that can be interacted with
+like a Linux service (i.e. in /etc/init.d or similar).
+
+    ./your_program.pl start
+
+On start, it will initiate a single parent process and a number of children
+processes. See [Daemon::Control](https://metacpan.org/pod/Daemon::Control) for additional information about the core
+part of the daemon. What Daemon::Device does beyond this is setup parent and
+child creation, monitor and replace children that die off, and offer hooks.
+
 # METHODS
 
 The following are methods of this module.
@@ -77,19 +87,20 @@ returns a Daemon::Device object that you should probably immediately call
 
 ### daemon
 
-One of the most important parameter, and it is required, is the "daemon"
-parameter, which contains a hashref of parameters that are passed as-is to
+One of the most important parameters is the "daemon" parameter. It's required,
+and it must contain a hashref of parameters that are passed as-is to
 [Daemon::Control](https://metacpan.org/pod/Daemon::Control). (It is almost a certainty you'll want to read the
-[Daemon::Control](https://metacpan.org/pod/Daemon::Control) documentation to understand the details of these parameters.)
+[Daemon::Control](https://metacpan.org/pod/Daemon::Control) documentation to understand the details of the parameters
+that go in this hashref.)
 
 ### spawn
 
-This is the number of child processes that should be spawned off the parent
-process initially. The number of child processes can be changed during runtime
-by calling `adjust_spawn()`. During runtime, you can also send INT or TERM
-signals to the children to kill them off. However, ensure the "replace\_children"
-parameter is set to false or else the parent will spawn new children to replace
-the dead ones.
+This is an integer and represents the number of child processes that should be
+spawned off the parent process initially. The number of child processes can be
+changed during runtime by calling `adjust_spawn()`. During runtime, you can
+also send INT or TERM signals to the children to kill them off. However, ensure
+the "replace\_children" parameter is set to false or else the parent will spawn
+new children to replace the dead ones.
 
 If "spawn" is not defined, the default of 1 child will be assumed.
 
@@ -210,7 +221,6 @@ itself will manage the PID key and value.
                 whine_about($_);
             }
         },
-
     );
 
 ### on\_parent\_hup
@@ -260,11 +270,12 @@ command line. Run will exit with 0 for success and uses LSB exit codes.
 
 ## adjust\_spawn
 
-The `adjust_spawn` method lets the parent set a new spawn numerical value
-during runtime. Lets say you have 10 children and they're fat (i.e. hogging
-memory) and lazy (i.e. not doing anything) and you want to "thin the herd," so
-to speak. Or perhaps you only spawned 2 children and there's more work than the
-2 can handle. The `adjust_spawn` method let's you spawn or terminate children.
+The `adjust_spawn` method accepts a positive integer, and from it tells the
+parent process to set a new spawn numerical value during runtime. Lets say you
+have 10 children and they're fat (i.e. hogging memory) and lazy (i.e. not doing
+anything) and you want to "thin the herd," so to speak. Or perhaps you only
+spawned 2 children and there's more work than the 2 can handle. The
+`adjust_spawn` method let's you spawn or terminate children.
 
 When you raise the total number of spawn, the parent will order the spawning,
 but the children may or may not be completely spawned by the time
