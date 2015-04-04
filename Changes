@@ -1,6 +1,7 @@
 Revision history for Daemon::Device
 
 {{$NEXT}}
+        - Setup some test skipping so Travis can pass the tests.
 
 1.01      2015-04-03 23:15:47-07:00 America/Los_Angeles
         - Extend timeout for unit tests so Travis can pass them; improve POD.
