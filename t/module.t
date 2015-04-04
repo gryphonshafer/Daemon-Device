@@ -8,6 +8,7 @@ use constant MODULE => 'Daemon::Device';
 BEGIN { use_ok(MODULE); }
 require_ok(MODULE);
 
+my $wait_time  = 1_200; # wait up to 20 minutes
 my $my_process = $$;
 my $my_log     = 'daemon_device_test_' . $my_process . '.log';
 
@@ -64,7 +65,7 @@ sub get_log_file {
 }
 
 my $good = 0;
-for ( 1 .. 10 ) {
+for ( 1 .. $wait_time ) {
     sleep 1;
     my $log_file = &get_log_file;
     if (
@@ -75,14 +76,14 @@ for ( 1 .. 10 ) {
         last;
     }
 }
-ok( $good, 'Parent and 3 (and no more) children started in under 10 seconds' );
+ok( $good, "Parent and 3 (and no more) children started in under $wait_time seconds" );
 
 my @pids = map { /(\d+)/; $1 } grep { $_ =~ /CHILD \d+ start/ } @{ &get_log_file };
 kill( 'TERM', shift @pids );
 kill( 'KILL', pop @pids );
 
 $good = 0;
-for ( 1 .. 10 ) {
+for ( 1 .. $wait_time ) {
     sleep 1;
     my $log_file = &get_log_file;
     if ( scalar( grep { $_ =~ /on_replace_child/ } @$log_file ) == 2 ) {
@@ -90,12 +91,12 @@ for ( 1 .. 10 ) {
         last;
     }
 }
-ok( $good, '2 children were appropriately replaced in under 10 seconds' );
+ok( $good, "2 children were appropriately replaced in under $wait_time seconds" );
 
 $obj->{daemon}->do_stop;
 
 $good = 0;
-for ( 1 .. 10 ) {
+for ( 1 .. $wait_time ) {
     sleep 1;
     my $log_file = &get_log_file;
     if (
@@ -106,7 +107,7 @@ for ( 1 .. 10 ) {
         last;
     }
 }
-ok( $good, 'Shutdown properly took place in under 10 seconds' );
+ok( $good, "Shutdown properly took place in under $wait_time seconds" );
 
 cmp_deeply(
     [ sort { $a cmp $b } map { s/\d+/D/; $_ } @{ &get_log_file } ],
