@@ -48,30 +48,30 @@ my $obj;
 ok( $obj = MODULE->new(@module_params), MODULE . '->new()' );
 is( ref $obj, MODULE, 'ref $object' );
 
-$obj->{daemon}->do_start;
-
-sub get_log_file {
-    open( my $log_file, '<', $my_log );
-    my @log_file = map { chomp; $_ } <$log_file>;
-    close($log_file);
-    return \@log_file;
-}
-
-my $good = 0;
-for ( 1 .. 10 ) {
-    sleep 1;
-    my $log_file = &get_log_file;
-    if (
-        scalar( grep { $_ =~ /PARENT \d+ start/ } @$log_file ) and
-        scalar( grep { $_ =~ /CHILD \d+ start/ } @$log_file ) == 3
-    ) {
-        $good = 1;
-        last;
-    }
-}
-ok( $good, 'Parent and 3 (and no more) children started in under 10 seconds' );
-
 unless ( $ENV{TRAVIS} ) {
+    $obj->{daemon}->do_start;
+
+    sub get_log_file {
+        open( my $log_file, '<', $my_log );
+        my @log_file = map { chomp; $_ } <$log_file>;
+        close($log_file);
+        return \@log_file;
+    }
+
+    my $good = 0;
+    for ( 1 .. 10 ) {
+        sleep 1;
+        my $log_file = &get_log_file;
+        if (
+            scalar( grep { $_ =~ /PARENT \d+ start/ } @$log_file ) and
+            scalar( grep { $_ =~ /CHILD \d+ start/ } @$log_file ) == 3
+        ) {
+            $good = 1;
+            last;
+        }
+    }
+    ok( $good, 'Parent and 3 (and no more) children started in under 10 seconds' );
+
     my @pids = map { /(\d+)/; $1 } grep { $_ =~ /CHILD \d+ start/ } @{&get_log_file};
 
     kill( 'TERM', shift @pids );
@@ -87,11 +87,9 @@ unless ( $ENV{TRAVIS} ) {
         }
     }
     ok( $good, '2 children were appropriately replaced in under 10 seconds' );
-}
 
-$obj->{daemon}->do_stop;
+    $obj->{daemon}->do_stop;
 
-unless ( $ENV{TRAVIS} ) {
     $good = 0;
     for ( 1 .. 10 ) {
         sleep 1;
@@ -120,6 +118,8 @@ unless ( $ENV{TRAVIS} ) {
         ],
         'Event actions appear to have all been conducted (and no extra actions)',
     );
+
+    $obj->{daemon}->do_stop;
 }
 
 unlink $my_log;
