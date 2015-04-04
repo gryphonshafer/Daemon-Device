@@ -1,6 +1,8 @@
 Revision history for Daemon::Device
 
 {{$NEXT}}
+
+1.01      2015-04-03 23:15:47-07:00 America/Los_Angeles
         - Extend timeout for unit tests so Travis can pass them; improve POD.
 
 1.00      2015-04-03 17:10:14-07:00 America/Los_Angeles
