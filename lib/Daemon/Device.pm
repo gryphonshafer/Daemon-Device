@@ -16,15 +16,33 @@ sub new {
 
     my $self = bless( {@_}, $class );
 
-    if ( not $self->{daemon}{user} ) {
-        my $user = getlogin || getpwuid($<) || 'root';
-        $self->{daemon}{user} ||= $user;
-    }
-    $self->{daemon}{group} ||= $self->{daemon}{user};
+    $self->{ '_' . $_ } = delete $self->{$_} for ( qw(
+        daemon
+        spawn
+        replace_children
+        parent_hup_to_child
+        parent
+        child
+        on_startup
+        on_shutdown
+        on_spawn
+        on_parent_hup
+        on_child_hup
+        on_parent_death
+        on_child_death
+        on_replace_child
+        data
+    ) );
 
-    croak 'new() called without "daemon" parameter as a hashref' unless ( ref( $self->{daemon} ) eq 'HASH' );
+    if ( not $self->{_daemon}{user} ) {
+        my $user = getlogin || getpwuid($<) || 'root';
+        $self->{_daemon}{user} ||= $user;
+    }
+    $self->{_daemon}{group} ||= $self->{_daemon}{user};
+
+    croak 'new() called without "daemon" parameter as a hashref' unless ( ref( $self->{_daemon} ) eq 'HASH' );
     for ( qw( program program_args ) ) {
-        croak qq{new() called with "daemon" hashref containing "$_" key} if ( $self->{daemon}{$_} );
+        croak qq{new() called with "daemon" hashref containing "$_" key} if ( $self->{_daemon}{$_} );
     }
     for ( qw(
         parent child
@@ -35,60 +53,62 @@ sub new {
             if ( exists $self->{$_} and ref( $self->{$_} ) ne 'CODE' );
     }
 
-    $self->{daemon}{program}      = \&parent;
-    $self->{daemon}{program_args} = [$self];
+    $self->{_daemon}{program}      = \&parent;
+    $self->{_daemon}{program_args} = [$self];
 
-    $self->{spawn}               ||= 1;
-    $self->{replace_children}    //= 1;
-    $self->{parent_hup_to_child} //= 1;
+    $self->{_spawn}               ||= 1;
+    $self->{_replace_children}    //= 1;
+    $self->{_parent_hup_to_child} //= 1;
+    $self->{_data}                //= {};
 
-    $self->{children}    = [];
-    $self->{parent_data} = {};
-    $self->{daemon}      = Daemon::Control->new( %{ $self->{daemon} } );
+    $self->{_children} = [];
+    $self->{_daemon}   = Daemon::Control->new( %{ $self->{_daemon} } );
 
     return $self;
 }
 
 sub run {
     my ($self) = @_;
-    return $self->{daemon}->run;
+    return $self->{_daemon}->run;
 }
 
 sub parent {
     my ( $daemon, $self ) = @_;
 
+    $self->{_ppid} = $$;
+
     $SIG{'HUP'} = sub {
-        $self->{on_parent_hup}->($self) if ( $self->{on_parent_hup} );
-        if ( $self->{parent_hup_to_child} ) {
-            kill( 'HUP', $_->{pid} ) for ( @{ $self->{children} } );
+        $self->{_on_parent_hup}->($self) if ( $self->{_on_parent_hup} );
+        if ( $self->{_parent_hup_to_child} ) {
+            kill( 'HUP', $_ ) for ( @{ $self->{_children} } );
         }
     };
 
     my $terminate = sub {
-        $self->{on_parent_death}->($self) if ( $self->{on_parent_death} );
-        kill( 'TERM', $_->{pid} ) for ( @{ $self->{children} } );
-        $self->{on_shutdown}->($self) if ( $self->{on_shutdown} );
+        $self->{_on_parent_death}->($self) if ( $self->{_on_parent_death} );
+        kill( 'TERM', $_ ) for ( @{ $self->{_children} } );
+        $self->{_on_shutdown}->($self) if ( $self->{_on_shutdown} );
         exit;
     };
     $SIG{$_} = $terminate for ( qw( TERM INT ABRT QUIT ) );
 
     $SIG{'CHLD'} = sub {
-        if ( $self->{replace_children} ) {
-            $self->{on_replace_child}->($self) if ( $self->{on_replace_child} );
-            for ( @{ $self->{children} } ) {
-                $_ = spawn($self) if ( waitpid( $_->{pid}, WNOHANG ) );
+        if ( $self->{_replace_children} ) {
+            $self->{_on_replace_child}->($self) if ( $self->{_on_replace_child} );
+            for ( @{ $self->{_children} } ) {
+                $_ = spawn($self) if ( waitpid( $_, WNOHANG ) );
             }
         }
     };
 
-    $self->{on_startup}->($self) if ( $self->{on_startup} );
+    $self->{_on_startup}->($self) if ( $self->{_on_startup} );
 
-    for ( 1 .. $self->{spawn} ) {
-        push( @{ $self->{children} }, spawn($self) );
+    for ( 1 .. $self->{_spawn} ) {
+        push( @{ $self->{_children} }, spawn($self) );
     }
 
-    if ( $self->{parent} ) {
-        $self->{parent}->($self);
+    if ( $self->{_parent} ) {
+        $self->{_parent}->($self);
     }
     else {
         wait;
@@ -100,16 +120,14 @@ sub parent {
 sub spawn {
     my ($self) = @_;
 
-    my $child_data = {};
-    $self->{on_spawn}->( $self, $child_data ) if ( $self->{on_spawn} );
+    $self->{_on_spawn}->($self) if ( $self->{_on_spawn} );
 
     if ( my $pid = fork ) {
-        $child_data->{pid} = $pid;
-        return $child_data;
+        return $pid;
     }
     else {
-        $child_data->{pid} = $$;
-        child( $self, $child_data );
+        $self->{_cpid} = $$;
+        child($self);
         exit;
     }
 
@@ -117,20 +135,20 @@ sub spawn {
 }
 
 sub child {
-    my ( $self, $child_data ) = @_;
+    my ($self) = @_;
 
     $SIG{'HUP'} = sub {
-        $self->{on_child_hup}->( $self, $child_data ) if ( $self->{on_child_hup} );
+        $self->{_on_child_hup}->($self) if ( $self->{_on_child_hup} );
     };
 
     my $terminate = sub {
-        $self->{on_child_death}->( $self, $child_data ) if ( $self->{on_child_death} );
+        $self->{_on_child_death}->($self) if ( $self->{_on_child_death} );
         exit;
     };
     $SIG{$_} = $terminate for ( qw( TERM INT ABRT QUIT ) );
 
-    if ( $self->{child} ) {
-        $self->{child}->( $self, $child_data );
+    if ( $self->{_child} ) {
+        $self->{_child}->($self);
     }
     else {
         sleep 1 while (1);
@@ -139,29 +157,70 @@ sub child {
     return;
 }
 
+sub ppid {
+    return shift->{_ppid};
+}
+
+sub cpid {
+    return shift->{_cpid};
+}
+
+sub children {
+    return shift->{_children};
+}
+
 sub adjust_spawn {
     my ( $self, $new_spawn_count ) = @_;
     $self->{spawn} = $new_spawn_count;
 
-    if ( @{ $self->{children} } < $self->{spawn} ) {
-        push( @{ $self->{children} }, spawn($self) ) while ( @{ $self->{children} } < $self->{spawn} );
+    if ( @{ $self->{_children} } < $self->{_spawn} ) {
+        push( @{ $self->{_children} }, spawn($self) ) while ( @{ $self->{_children} } < $self->{_spawn} );
     }
-    elsif ( @{ $self->{children} } > $self->{spawn} ) {
-        my $set_replace_children = $self->{replace_children};
-        $self->{replace_children} = 0;
+    elsif ( @{ $self->{_children} } > $self->{_spawn} ) {
+        my $set_replace_children = $self->{_replace_children};
+        $self->{_replace_children} = 0;
 
         my @killed_pids;
-        while ( @{ $self->{children} } > $self->{spawn} ) {
-            my $child = shift @{ $self->{children} };
-            kill( 'TERM', $child->{pid} );
-            push( @killed_pids, $child->{pid} );
+        while ( @{ $self->{_children} } > $self->{_spawn} ) {
+            my $child = shift @{ $self->{_children} };
+            kill( 'TERM', $child );
+            push( @killed_pids, $child );
         }
 
         waitpid( $_, 0 ) for (@killed_pids);
-        $self->{replace_children} = $set_replace_children;
+        $self->{_replace_children} = $set_replace_children;
     }
 
     return;
+}
+
+sub replace_children {
+    my $self = shift;
+    $self->{_replace_children} = $_[0] if (@_);
+    return $self->{_replace_children};
+}
+
+sub parent_hup_to_child {
+    my $self = shift;
+    $self->{_parent_hup_to_child} = $_[0] if (@_);
+    return $self->{_parent_hup_to_child};
+}
+
+sub data {
+    my $self = shift;
+    return $self->{'_data'} unless (@_);
+
+    if ( @_ == 1 ) {
+        return $self->{'_data'}{ $_[0] } if ( not ref $_[0] );
+        $self->{'_data'}{$_} = $_[0]->{$_} for ( keys %{ $_[0] } );
+        return $self;
+    }
+
+    croak( 'data() called with uneven number of parameters' ) if ( @_ % 2 != 0 );
+
+    my %params = @_;
+    $self->{'_data'}{$_} = $_[0]->{$_} for ( keys %params );
+    return $self;
 }
 
 1;
@@ -209,7 +268,7 @@ __END__
     }
 
     sub child {
-        my ( $device, $child_data ) = @_;
+        my ($device) = @_;
 
         while (1) {
             warn "Child $$ exists (heartbeat)\n";
@@ -307,7 +366,7 @@ in every child process.
     exit Daemon::Device->new(
         daemon => \%daemon_control_settings,
         child  => sub {
-            my ( $device, $child_data ) = @_;
+            my ($device) = @_;
 
             while (1) {
                 warn "Child $$ exists (heartbeat)\n";
@@ -316,12 +375,8 @@ in every child process.
         },
     )->run;
 
-The subroutine is provided a reference to the device object and a "child data"
-hashref that contains at least the child's PID, but may contain other things
-if you so hook in somewhere and add them. More on that later. It's expected that
-if you need to keep the parent running, you'll implement something in this
-subroutine that will do that, like a C<while> loop.
-
+It's expected that if you need to keep the parent running, you'll implement
+something in this subroutine that will do that, like a C<while> loop.
 If "child" is not defined, then the child will sit around and wait forever.
 Not sure why you'd want to spawn children and then let them be lazy like this
 since idle hands are the devil's playthings, though.
@@ -359,37 +414,7 @@ a reference to the device object.
 This optional parameter is a runtime hook. It expects a subroutine reference
 for code that should be called from inside the parent process just prior to
 the parent spawning any child, even children that are spawned to replace
-dead children. The subroutine will be passed a reference to the device object
-and a reference to an empty hashref that will end up being used as the
-"child data" hashref.
-
-All children will be given this "child data" hashref that can be used as a
-data store for whatever you need from the parent inside the child. The device
-itself will manage the PID key and value.
-
-    exit Daemon::Device->new(
-        daemon => \%daemon_control_settings,
-
-        on_spawn => sub {
-            my ( $device, $child_data ) = @_;
-            $child_data->{pipe} = $device->{parent_data}{pipe} = IO::Pipe->new;
-        },
-
-        parent => sub {
-            my ( $device, $child_data ) = @_;
-            $device->{parent_data}{pipe}->writer;
-            $device->{parent_data}{pipe}->say('Hey child, do some work!');
-        },
-
-        child => sub {
-            my ( $device, $child_data ) = @_;
-            $child_data->{pipe}->reader;
-
-            while ( $_ = $child_data->{pipe}->getline ) {
-                whine_about($_);
-            }
-        },
-    );
+dead children. The subroutine will be passed a reference to the device object.
 
 =head3 on_parent_hup
 
@@ -403,7 +428,7 @@ object.
 This optional parameter is a runtime hook. It expects a subroutine reference
 for code that should be called from inside child processes when the child
 receives a HUP signal. The subroutine will be passed a reference to the device
-object and the "child data" hashref.
+object.
 
 =head3 on_parent_death
 
@@ -428,13 +453,24 @@ then the parent will spawn new children to replace children that die. The
 C<on_replace_child> optional parameter is a runtime hook. It expects a
 subroutine reference for code that should be called from inside the parent just
 prior to replacing a dead child. The subroutine will be passed a reference to
-the device object and the "child data" hashref.
+the device object.
 
 =head2 run
 
 The C<run()> method calls the method of the same name from L<Daemon::Control>.
 This will make your program act like an init file, accepting input from the
 command line. Run will exit with 0 for success and uses LSB exit codes.
+
+=head2 ppid, cpid
+
+These methods return the parent PID or child PID. From both parent processes
+and child processes, C<ppid> will return the parent's PID. From only child
+processes, C<cpid> will return the child's PID. From the parent, C<cpid> will
+return undef.
+
+=head2 children
+
+This will return an arrayref of PIDs for all the children currently spawned.
 
 =head2 adjust_spawn
 
@@ -451,6 +487,48 @@ C<adjust_spawn> returns. Normally, this shouldn't be a problem. When you lower
 the total number of spawn, C<adjust_spawn> will not return until some children
 are really dead sufficient to bring the total number of children to the spawn
 number.
+
+=head2 replace_children, parent_hup_to_child
+
+These are simple get-er/set-er methods for the C<replace_children> and
+C<parent_hup_to_child> values, allowing you to change them during runtime.
+This should be done in parents. Remember that data values are copied into
+children during spawning (i.e. forking), so changing these values in children
+is meaningless.
+
+=head1 DATA
+
+Each parent and child have a simple data storage mechanism in them under the
+"data" parameter and "data" method, all of which is optional. To use it,
+you can, if you elect, pass the "data" parameter to C<new()>.
+
+    exit Daemon::Device->new(
+        daemon => \%daemon_control_settings,
+        parent => \&parent,
+        child  => \&child,
+        data   => {
+            answer => 42,
+            thx    => 1138,
+        },
+    )->run;
+
+This will result in the parent getting this data block, which can be accessed
+via the C<data()> method from within the parent. The C<data()> method is a
+fairly typical key/value parameter get-er/set-er.
+
+    sub parent {
+        my ($device) = @_;
+        warn $device->data('answer');            # returns 42
+        $device->data( 'answer' => 0 );          # sets "answer" to 0
+        $device->data( 'a' => 1, 'b' => 2 );     # set multiple things
+        $device->data( { 'a' => 1, 'b' => 2 } ); # set multiple things
+        my $data = $device->data                 # hashref of all data
+    }
+
+When children are spawned, they will pick up a copy of whatever's in the
+parent's data when the spawning takes place. This is a copy, so changing data
+in one place does not change it elsewhere. Note also that in some cases you
+can't guarentee the exact order or timing of spawning children.
 
 =head1 SEE ALSO
 

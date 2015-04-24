@@ -29,7 +29,7 @@ my @module_params = (
     },
 
     child => sub {
-        my ( $device, $child_data ) = @_;
+        my ($device) = @_;
         warn "CHILD $$ start\n";
         sleep 1 while (1);
     },
@@ -49,7 +49,7 @@ ok( $obj = MODULE->new(@module_params), MODULE . '->new()' );
 is( ref $obj, MODULE, 'ref $object' );
 
 unless ( $ENV{TRAVIS} ) {
-    $obj->{daemon}->do_start;
+    $obj->{_daemon}->do_start;
 
     sub get_log_file {
         open( my $log_file, '<', $my_log );
@@ -88,7 +88,7 @@ unless ( $ENV{TRAVIS} ) {
     }
     ok( $good, '2 children were appropriately replaced in under 10 seconds' );
 
-    $obj->{daemon}->do_stop;
+    $obj->{_daemon}->do_stop;
 
     $good = 0;
     for ( 1 .. 10 ) {
@@ -119,7 +119,7 @@ unless ( $ENV{TRAVIS} ) {
         'Event actions appear to have all been conducted (and no extra actions)',
     );
 
-    $obj->{daemon}->do_stop;
+    $obj->{_daemon}->do_stop;
 }
 
 unlink $my_log;
