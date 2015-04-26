@@ -5,8 +5,9 @@ use strict;
 use warnings;
 use 5.0113;
 use Daemon::Control;
-use Carp 'croak';
+use Carp qw( croak carp );
 use POSIX ":sys_wait_h";
+use IO::Pipe;
 
 # VERSION
 
@@ -31,6 +32,7 @@ sub new {
         on_parent_death
         on_child_death
         on_replace_child
+        on_message
         data
     ) );
 
@@ -80,13 +82,13 @@ sub parent {
     $SIG{'HUP'} = sub {
         $self->{_on_parent_hup}->($self) if ( $self->{_on_parent_hup} );
         if ( $self->{_parent_hup_to_child} ) {
-            kill( 'HUP', $_ ) for ( @{ $self->{_children} } );
+            kill( 'HUP', $_->{pid} ) for ( @{ $self->{_children} } );
         }
     };
 
     my $terminate = sub {
         $self->{_on_parent_death}->($self) if ( $self->{_on_parent_death} );
-        kill( 'TERM', $_ ) for ( @{ $self->{_children} } );
+        kill( 'TERM', $_->{pid} ) for ( @{ $self->{_children} } );
         $self->{_on_shutdown}->($self) if ( $self->{_on_shutdown} );
         exit;
     };
@@ -96,8 +98,15 @@ sub parent {
         if ( $self->{_replace_children} ) {
             $self->{_on_replace_child}->($self) if ( $self->{_on_replace_child} );
             for ( @{ $self->{_children} } ) {
-                $_ = spawn($self) if ( waitpid( $_, WNOHANG ) );
+                $_ = spawn($self) if ( waitpid( $_->{pid}, WNOHANG ) );
             }
+        }
+    };
+
+    $SIG{'URG'} = sub {
+        if ( $self->{_on_message} ) {
+            my @messages = map { split(/\r?\n/) } map { $_->{io_up}->getlines } @{ $self->{_children} };
+            $self->{_on_message}->( $self, @messages );
         }
     };
 
@@ -122,11 +131,41 @@ sub spawn {
 
     $self->{_on_spawn}->($self) if ( $self->{_on_spawn} );
 
+    my ( $io_up, $io_dn );
+    if ( $self->{_on_message} ) {
+        $io_up = IO::Pipe->new;
+        $io_dn = IO::Pipe->new;
+    }
+
     if ( my $pid = fork ) {
-        return $pid;
+        my $child_data = { pid => $pid };
+
+        if ( $self->{_on_message} ) {
+            $io_up->reader;
+            $io_dn->writer;
+            for ( $io_up, $io_dn ) {
+                $_->autoflush;
+                $_->blocking(0);
+            }
+            $child_data->{io_up} = $io_up;
+            $child_data->{io_dn} = $io_dn;
+        }
+
+        return $child_data;
     }
     else {
-        $self->{_cpid} = $$;
+        if ( $self->{_on_message} ) {
+            $io_up->writer;
+            $io_dn->reader;
+            for ( $io_up, $io_dn ) {
+                $_->autoflush;
+                $_->blocking(0);
+            }
+            $self->{_io_up} = $io_up;
+            $self->{_io_dn} = $io_dn;
+        }
+
+        $self->{_cpid}  = $$;
         child($self);
         exit;
     }
@@ -147,6 +186,13 @@ sub child {
     };
     $SIG{$_} = $terminate for ( qw( TERM INT ABRT QUIT ) );
 
+    $SIG{'URG'} = sub {
+        if ( $self->{_on_message} ) {
+            my @messages = map { split(/\r?\n/) } $self->{_io_dn}->getlines;
+            $self->{_on_message}->( $self, @messages );
+        }
+    };
+
     if ( $self->{_child} ) {
         $self->{_child}->($self);
     }
@@ -166,7 +212,7 @@ sub cpid {
 }
 
 sub children {
-    return shift->{_children};
+    return [ map { $_->{pid} } @{ shift->{_children} } ];
 }
 
 sub adjust_spawn {
@@ -183,8 +229,8 @@ sub adjust_spawn {
         my @killed_pids;
         while ( @{ $self->{_children} } > $self->{_spawn} ) {
             my $child = shift @{ $self->{_children} };
-            kill( 'TERM', $child );
-            push( @killed_pids, $child );
+            kill( 'TERM', $child->{pid} );
+            push( @killed_pids, $child->{pid} );
         }
 
         waitpid( $_, 0 ) for (@killed_pids);
@@ -216,11 +262,38 @@ sub data {
         return $self;
     }
 
-    croak( 'data() called with uneven number of parameters' ) if ( @_ % 2 != 0 );
+    if ( @_ % 2 != 0 ) {
+        carp( 'data() called with uneven number of parameters' );
+    }
+    else {
+        my %params = @_;
+        $self->{'_data'}{$_} = $params{$_} for ( keys %params );
+    }
 
-    my %params = @_;
-    $self->{'_data'}{$_} = $_[0]->{$_} for ( keys %params );
     return $self;
+}
+
+sub message {
+    my ( $self, $pid, $message ) = @_;
+
+    unless ( $self->{_on_message} ) {
+        carp('message() called without an on_message handler set');
+        return;
+    }
+
+    my $io;
+    eval {
+        $io = ( $self->{_ppid} == $pid )
+            ? $self->{_io_up}
+            : ( grep { $_->{pid} == $pid } @{ $self->{_children} } )[0]->{io_dn}
+    };
+    if ($@) {
+        carp("Failed to find IO path for message to $pid");
+        return;
+    }
+
+    $io->say($message) or carp("Failed to send message to $pid");
+    kill( 'URG', $pid ) or carp("Failed to signal process $pid to new message");
 }
 
 1;
@@ -530,9 +603,63 @@ parent's data when the spawning takes place. This is a copy, so changing data
 in one place does not change it elsewhere. Note also that in some cases you
 can't guarentee the exact order or timing of spawning children.
 
+=head1 MESSAGING
+
+You can, of course, setup whatever interprocess communications you'd like. In
+an attempt to be helpful, this module offers basic interprocess communications
+messaging. Normally, this messaging is unused and not activated. However, by
+defining an C<on_message> handler in C<new()>, you will be able to call a
+method called C<message()> to send messages between a parent and its children
+or from any child to its parent. (Child-to-child communication is unsupported,
+so if you need that, you'll need to create your own, better communications.)
+
+=head2 on_message
+
+This optional parameter to C<new()> is a runtime hook. It expects a subroutine
+reference for code that should be called from inside either the parent or
+child process that receives a message sent via the C<message()> method.
+The subroutine will be passed a reference to the device object and an array
+of messages received from a buffer. This is almost always only 1, but it could
+be more, so code accordingly.
+
+    sub on_message {
+        my $device = shift;
+        say "Received message: $_" for (@_);
+    }
+
+=head2 message
+
+This method sends a message to a parent from one of its children or from a
+child to its parent. It expects the PID of the process to which the message
+should be sent and the message itself, which is expected to be a simple text
+string. It's up to you to encode/serialize your data for transport.
+
+    $device->message( 1138, 'Message for you, sir.' );
+
+=head2 Messaging Gotchas
+
+If you provide a PID to C<message()> that is not valid (not a child of the
+parent from which the message originates or not a parent from the child from
+which the message originates), suffer an error you will.
+
+Also note that sometimes during spawning of child processes it is possible
+that a message from the parent can get sent to a child before that child is
+ready to receive the message, in which case the message will be dropped.
+If you want to get data from the parent to the child, have the child tell the
+parent it's ready, then have the parent send the child data.
+
+The C<on_message> hook is universal, meaning that it's the same subroutine
+that's called from both the parent and children to handle incoming messages.
+You'll therefore need to write a little logic to handle the differences if
+the use cases requires that.
+
+The messaging is provided through use of a couple of L<IO::Pipe> objects per
+child. The messaging is simple, limited, but fast. If you need something better,
+you'll need to construct it yourself, or perhaps consider something like ZeroMQ.
+
 =head1 SEE ALSO
 
-L<Daemon::Control>.
+L<Daemon::Control>, L<IO::Pipe>.
 
 You can also look for additional information at:
 
@@ -546,6 +673,6 @@ You can also look for additional information at:
 * L<CPANTS|http://cpants.cpanauthors.org/dist/Daemon-Device>
 * L<CPAN Testers|http://www.cpantesters.org/distro/D/Daemon-Device.html>
 
-=for Pod::Coverage BUILD is_authed json passwd ua user
+=for Pod::Coverage BUILD is_authed json passwd ua user data
 
 =cut
