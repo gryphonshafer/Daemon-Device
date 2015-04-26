@@ -1,6 +1,8 @@
 Revision history for Daemon::Device
 
 {{$NEXT}}
+
+1.03      2015-04-25 17:20:35-07:00 America/Los_Angeles
         - Added simple interprocess messaging methods
 
 1.02      2015-04-04 10:43:05-07:00 America/Los_Angeles
