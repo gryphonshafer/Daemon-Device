@@ -296,6 +296,13 @@ sub message {
     kill( 'URG', $pid ) or carp("Failed to signal process $pid to new message");
 }
 
+our $AUTOLOAD;
+sub AUTOLOAD {
+    my $self = shift;
+    my $key = ( split( '::', $AUTOLOAD ) )[-1];
+    return $self->data($key);
+}
+
 1;
 __END__
 
@@ -602,6 +609,18 @@ When children are spawned, they will pick up a copy of whatever's in the
 parent's data when the spawning takes place. This is a copy, so changing data
 in one place does not change it elsewhere. Note also that in some cases you
 can't guarentee the exact order or timing of spawning children.
+
+=head2 Helper Methods
+
+As a convenience, you can access any single data value by referencing a method
+of the same name.
+
+    $device->data(
+        noun => 'World',
+        hi   => sub { say "Hello $_[0]" },
+    );
+
+    say $device->hi( $device->noun );
 
 =head1 MESSAGING
 

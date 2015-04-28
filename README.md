@@ -4,7 +4,7 @@ Daemon::Device - Forking daemon device construct
 
 # VERSION
 
-version 1.03
+version 1.04
 
 [![Build Status](https://travis-ci.org/gryphonshafer/Daemon-Device.svg)](https://travis-ci.org/gryphonshafer/Daemon-Device)
 [![Coverage Status](https://coveralls.io/repos/gryphonshafer/Daemon-Device/badge.png)](https://coveralls.io/r/gryphonshafer/Daemon-Device)
@@ -302,6 +302,18 @@ When children are spawned, they will pick up a copy of whatever's in the
 parent's data when the spawning takes place. This is a copy, so changing data
 in one place does not change it elsewhere. Note also that in some cases you
 can't guarentee the exact order or timing of spawning children.
+
+## Helper Methods
+
+As a convenience, you can access any single data value by referencing a method
+of the same name.
+
+    $device->data(
+        noun => 'World',
+        hi   => sub { say "Hello $_[0]" },
+    );
+
+    say $device->hi( $device->noun );
 
 # MESSAGING
 
