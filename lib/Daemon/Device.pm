@@ -55,7 +55,7 @@ sub new {
             if ( exists $self->{$_} and ref( $self->{$_} ) ne 'CODE' );
     }
 
-    $self->{_daemon}{program}      = \&parent;
+    $self->{_daemon}{program}      = \&_parent;
     $self->{_daemon}{program_args} = [$self];
 
     $self->{_spawn}               ||= 1;
@@ -74,7 +74,7 @@ sub run {
     return $self->{_daemon}->run;
 }
 
-sub parent {
+sub _parent {
     my ( $daemon, $self ) = @_;
 
     $self->{_ppid} = $$;
@@ -98,7 +98,7 @@ sub parent {
         if ( $self->{_replace_children} ) {
             $self->{_on_replace_child}->($self) if ( $self->{_on_replace_child} );
             for ( @{ $self->{_children} } ) {
-                $_ = spawn($self) if ( waitpid( $_->{pid}, WNOHANG ) );
+                $_ = _spawn($self) if ( waitpid( $_->{pid}, WNOHANG ) );
             }
         }
     };
@@ -113,7 +113,7 @@ sub parent {
     $self->{_on_startup}->($self) if ( $self->{_on_startup} );
 
     for ( 1 .. $self->{_spawn} ) {
-        push( @{ $self->{_children} }, spawn($self) );
+        push( @{ $self->{_children} }, _spawn($self) );
     }
 
     if ( $self->{_parent} ) {
@@ -126,7 +126,7 @@ sub parent {
     return;
 }
 
-sub spawn {
+sub _spawn {
     my ($self) = @_;
 
     $self->{_on_spawn}->($self) if ( $self->{_on_spawn} );
@@ -166,14 +166,14 @@ sub spawn {
         }
 
         $self->{_cpid}  = $$;
-        child($self);
+        _child($self);
         exit;
     }
 
     return;
 }
 
-sub child {
+sub _child {
     my ($self) = @_;
 
     $SIG{'HUP'} = sub {
@@ -217,12 +217,12 @@ sub children {
 
 sub adjust_spawn {
     my ( $self, $new_spawn_count ) = @_;
-    $self->{spawn} = $new_spawn_count;
+    $self->{_spawn} = $new_spawn_count;
 
-    if ( @{ $self->{_children} } < $self->{_spawn} ) {
-        push( @{ $self->{_children} }, spawn($self) ) while ( @{ $self->{_children} } < $self->{_spawn} );
+    if ( @{ $self->{_children} } > 0 and @{ $self->{_children} } < $self->{_spawn} ) {
+        push( @{ $self->{_children} }, _spawn($self) ) while ( @{ $self->{_children} } < $self->{_spawn} );
     }
-    elsif ( @{ $self->{_children} } > $self->{_spawn} ) {
+    elsif ( @{ $self->{_children} } > 0 and @{ $self->{_children} } > $self->{_spawn} ) {
         my $set_replace_children = $self->{_replace_children};
         $self->{_replace_children} = 0;
 

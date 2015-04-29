@@ -1,8 +1,10 @@
 Revision history for Daemon::Device
 
 {{$NEXT}}
+        - Improvements to internal/external subs/data
 
 1.04      2015-04-28 13:20:56-07:00 America/Los_Angeles
+        - Helper methods to data() values
 
 1.03      2015-04-25 17:20:35-07:00 America/Los_Angeles
         - Added simple interprocess messaging methods
