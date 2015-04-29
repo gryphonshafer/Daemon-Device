@@ -1,6 +1,8 @@
 Revision history for Daemon::Device
 
 {{$NEXT}}
+
+1.05      2015-04-29 11:28:19-07:00 America/Los_Angeles
         - Improvements to internal/external subs/data
 
 1.04      2015-04-28 13:20:56-07:00 America/Los_Angeles
