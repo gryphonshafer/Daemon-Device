@@ -40,7 +40,7 @@ sub new {
         my $user = getlogin || getpwuid($<) || 'root';
         $self->{_daemon}{user} ||= $user;
     }
-    $self->{_daemon}{group} ||= (getgrgid((getpwnam($self->{_daemon}{user}))[3]))[0];
+    $self->{_daemon}{group} ||= ( getgrgid( (getpwnam( $self->{_daemon}{user} ) )[3] ) )[0];
 
     croak 'new() called without "daemon" parameter as a hashref' unless ( ref( $self->{_daemon} ) eq 'HASH' );
     for ( qw( program program_args ) ) {
