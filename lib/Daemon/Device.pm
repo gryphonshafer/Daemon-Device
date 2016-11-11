@@ -74,6 +74,11 @@ sub run {
     return $self->{_daemon}->run;
 }
 
+sub daemon {
+    my ($self) = @_;
+    return $self->{_daemon};
+}
+
 sub _parent {
     my ( $daemon, $self ) = @_;
 
@@ -540,6 +545,11 @@ the device object.
 The C<run()> method calls the method of the same name from L<Daemon::Control>.
 This will make your program act like an init file, accepting input from the
 command line. Run will exit with 0 for success and uses LSB exit codes.
+
+=head2 daemon
+
+If you need to access the L<Daemon::Control> object inside the device, you can
+do so with the C<daemon()> method.
 
 =head2 ppid, cpid
 

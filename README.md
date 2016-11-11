@@ -4,7 +4,7 @@ Daemon::Device - Forking daemon device construct
 
 # VERSION
 
-version 1.06
+version 1.07
 
 [![Build Status](https://travis-ci.org/gryphonshafer/Daemon-Device.svg)](https://travis-ci.org/gryphonshafer/Daemon-Device)
 [![Coverage Status](https://coveralls.io/repos/gryphonshafer/Daemon-Device/badge.png)](https://coveralls.io/r/gryphonshafer/Daemon-Device)
@@ -233,6 +233,11 @@ the device object.
 The `run()` method calls the method of the same name from [Daemon::Control](https://metacpan.org/pod/Daemon::Control).
 This will make your program act like an init file, accepting input from the
 command line. Run will exit with 0 for success and uses LSB exit codes.
+
+## daemon
+
+If you need to access the [Daemon::Control](https://metacpan.org/pod/Daemon::Control) object inside the device, you can
+do so with the `daemon()` method.
 
 ## ppid, cpid
 

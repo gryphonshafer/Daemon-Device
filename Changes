@@ -1,6 +1,7 @@
 Revision history for Daemon::Device
 
 {{$NEXT}}
+        - Provided accessor to the Daemon::Control sub-object
 
 1.06      2016-08-08 14:35:10-07:00 America/Los_Angeles
         - Fix for bug when installed not as root and a group named $user does not exist
