@@ -1,9 +1,10 @@
 package Daemon::Device;
 # ABSTRACT: Forking daemon device construct
 
+use 5.012;
 use strict;
 use warnings;
-use 5.0113;
+
 use Daemon::Control;
 use Carp qw( croak carp );
 use POSIX ":sys_wait_h";
