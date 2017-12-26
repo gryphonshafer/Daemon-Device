@@ -4,7 +4,7 @@ Daemon::Device - Forking daemon device construct
 
 # VERSION
 
-version 1.07
+version 1.08
 
 [![Build Status](https://travis-ci.org/gryphonshafer/Daemon-Device.svg)](https://travis-ci.org/gryphonshafer/Daemon-Device)
 [![Coverage Status](https://coveralls.io/repos/gryphonshafer/Daemon-Device/badge.png)](https://coveralls.io/r/gryphonshafer/Daemon-Device)
@@ -391,11 +391,11 @@ You can also look for additional information at:
 
 # AUTHOR
 
-Gryphon Shafer &lt;gryphon@cpan.org>
+Gryphon Shafer <gryphon@cpan.org>
 
 # COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2015 by Gryphon Shafer.
+This software is copyright (c) 2018 by Gryphon Shafer.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

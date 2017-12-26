@@ -1,6 +1,7 @@
 Revision history for Daemon::Device
 
 {{$NEXT}}
+        - Adding Perl versions to test; annual general update for 2018
 
 1.07      2016-11-11 08:45:38-08:00 America/Los_Angeles
         - Provided accessor to the Daemon::Control sub-object
