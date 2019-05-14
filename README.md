@@ -45,6 +45,7 @@ version 1.08
 
         while (1) {
             warn "Child $$ exists (heartbeat)\n";
+            exit unless ( $self->parent_alive );
             sleep 5;
         }
     }
@@ -143,6 +144,7 @@ in every child process.
 
             while (1) {
                 warn "Child $$ exists (heartbeat)\n";
+                exit unless ( $self->parent_alive );
                 sleep 5;
             }
         },
@@ -273,6 +275,22 @@ These are simple get-er/set-er methods for the `replace_children` and
 This should be done in parents. Remember that data values are copied into
 children during spawning (i.e. forking), so changing these values in children
 is meaningless.
+
+## parent\_alive
+
+The `parent_alive` method returns true if the daemon parent still lives or
+false if it doesn't live. This is useful when writing child code, since a child
+should periodically check to see if it's an orphan.
+
+    exit Daemon::Device->new(
+        daemon => \%daemon_control_settings,
+        child  => sub {
+            while (1) {
+                exit unless ( $self->parent_alive );
+                sleep 1;
+            }
+        },
+    )->run;
 
 # DATA
 
