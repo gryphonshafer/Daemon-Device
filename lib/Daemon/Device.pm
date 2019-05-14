@@ -171,7 +171,7 @@ sub _spawn {
             $self->{_io_dn} = $io_dn;
         }
 
-        $self->{_cpid}  = $$;
+        $self->{_cpid} = $$;
         _child($self);
         exit;
     }
@@ -203,7 +203,10 @@ sub _child {
         $self->{_child}->($self);
     }
     else {
-        sleep 1 while (1);
+        while (1) {
+            exit unless ( $self->parent_alive );
+            sleep 1;
+        }
     }
 
     return;
@@ -256,6 +259,11 @@ sub parent_hup_to_child {
     my $self = shift;
     $self->{_parent_hup_to_child} = $_[0] if (@_);
     return $self->{_parent_hup_to_child};
+}
+
+sub parent_alive {
+    my ($self) = @_;
+    return kill( 0, $self->{_ppid} );
 }
 
 sub data {
@@ -358,6 +366,7 @@ __END__
 
         while (1) {
             warn "Child $$ exists (heartbeat)\n";
+            exit unless ( $self->parent_alive );
             sleep 5;
         }
     }
@@ -456,6 +465,7 @@ in every child process.
 
             while (1) {
                 warn "Child $$ exists (heartbeat)\n";
+                exit unless ( $self->parent_alive );
                 sleep 5;
             }
         },
@@ -586,6 +596,22 @@ C<parent_hup_to_child> values, allowing you to change them during runtime.
 This should be done in parents. Remember that data values are copied into
 children during spawning (i.e. forking), so changing these values in children
 is meaningless.
+
+=head2 parent_alive
+
+The C<parent_alive> method returns true if the daemon parent still lives or
+false if it doesn't live. This is useful when writing child code, since a child
+should periodically check to see if it's an orphan.
+
+    exit Daemon::Device->new(
+        daemon => \%daemon_control_settings,
+        child  => sub {
+            while (1) {
+                exit unless ( $self->parent_alive );
+                sleep 1;
+            }
+        },
+    )->run;
 
 =head1 DATA
 
