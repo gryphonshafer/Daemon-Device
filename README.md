@@ -45,7 +45,7 @@ version 1.08
 
         while (1) {
             warn "Child $$ exists (heartbeat)\n";
-            exit unless ( $self->parent_alive );
+            exit unless ( $device->parent_alive );
             sleep 5;
         }
     }
@@ -144,7 +144,7 @@ in every child process.
 
             while (1) {
                 warn "Child $$ exists (heartbeat)\n";
-                exit unless ( $self->parent_alive );
+                exit unless ( $device->parent_alive );
                 sleep 5;
             }
         },
@@ -285,6 +285,7 @@ should periodically check to see if it's an orphan.
     exit Daemon::Device->new(
         daemon => \%daemon_control_settings,
         child  => sub {
+            my ($self) = @_;
             while (1) {
                 exit unless ( $self->parent_alive );
                 sleep 1;
