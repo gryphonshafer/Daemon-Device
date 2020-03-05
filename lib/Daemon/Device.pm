@@ -722,9 +722,7 @@ You can also look for additional information at:
 
 =for :list
 * L<GitHub|https://github.com/gryphonshafer/Daemon-Device>
-* L<CPAN|http://search.cpan.org/dist/Daemon-Device>
 * L<MetaCPAN|https://metacpan.org/pod/Daemon::Device>
-* L<AnnoCPAN|http://annocpan.org/dist/Daemon-Device>
 * L<Travis CI|https://travis-ci.org/gryphonshafer/Daemon-Device>
 * L<Coveralls|https://coveralls.io/r/gryphonshafer/Daemon-Device>
 * L<CPANTS|http://cpants.cpanauthors.org/dist/Daemon-Device>
