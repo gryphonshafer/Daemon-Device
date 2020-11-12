@@ -4,10 +4,10 @@ Daemon::Device - Forking daemon device construct
 
 # VERSION
 
-version 1.08
+version 1.09
 
-[![Build Status](https://travis-ci.org/gryphonshafer/Daemon-Device.svg)](https://travis-ci.org/gryphonshafer/Daemon-Device)
-[![Coverage Status](https://coveralls.io/repos/gryphonshafer/Daemon-Device/badge.png)](https://coveralls.io/r/gryphonshafer/Daemon-Device)
+[![build](https://github.com/gryphonshafer/Daemon-Device/workflows/build/badge.svg)](https://github.com/gryphonshafer/Daemon-Device/actions?query=workflow%3Abuild)
+[![codecov](https://codecov.io/gh/gryphonshafer/Daemon-Device/graph/badge.svg)](https://codecov.io/gh/gryphonshafer/Daemon-Device)
 
 # SYNOPSIS
 
@@ -54,7 +54,7 @@ version 1.08
 
 This module provides a straight-forward and simple construct to creating
 applications that run as daemons and fork some number of child processes.
-This module leverages the excellent [Daemon::Control](https://metacpan.org/pod/Daemon::Control) to provide the
+This module leverages the excellent [Daemon::Control](https://metacpan.org/pod/Daemon%3A%3AControl) to provide the
 functionality for the daemon itself, and it manages the spawning and
 monitoring of the children. It also provides some hooks into various parts of
 the daemon's lifecycle.
@@ -65,7 +65,7 @@ like a Linux service (i.e. in /etc/init.d or similar).
     ./your_program.pl start
 
 On start, it will initiate a single parent process and a number of children
-processes. See [Daemon::Control](https://metacpan.org/pod/Daemon::Control) for additional information about the core
+processes. See [Daemon::Control](https://metacpan.org/pod/Daemon%3A%3AControl) for additional information about the core
 part of the daemon. What Daemon::Device does beyond this is setup parent and
 child creation, monitor and replace children that die off, and offer hooks.
 
@@ -90,8 +90,8 @@ returns a Daemon::Device object that you should probably immediately call
 
 One of the most important parameters is the "daemon" parameter. It's required,
 and it must contain a hashref of parameters that are passed as-is to
-[Daemon::Control](https://metacpan.org/pod/Daemon::Control). (It is almost a certainty you'll want to read the
-[Daemon::Control](https://metacpan.org/pod/Daemon::Control) documentation to understand the details of the parameters
+[Daemon::Control](https://metacpan.org/pod/Daemon%3A%3AControl). (It is almost a certainty you'll want to read the
+[Daemon::Control](https://metacpan.org/pod/Daemon%3A%3AControl) documentation to understand the details of the parameters
 that go in this hashref.)
 
 ### spawn
@@ -232,13 +232,13 @@ the device object.
 
 ## run
 
-The `run()` method calls the method of the same name from [Daemon::Control](https://metacpan.org/pod/Daemon::Control).
+The `run()` method calls the method of the same name from [Daemon::Control](https://metacpan.org/pod/Daemon%3A%3AControl).
 This will make your program act like an init file, accepting input from the
 command line. Run will exit with 0 for success and uses LSB exit codes.
 
 ## daemon
 
-If you need to access the [Daemon::Control](https://metacpan.org/pod/Daemon::Control) object inside the device, you can
+If you need to access the [Daemon::Control](https://metacpan.org/pod/Daemon%3A%3AControl) object inside the device, you can
 do so with the `daemon()` method.
 
 ## ppid, cpid
@@ -389,22 +389,20 @@ that's called from both the parent and children to handle incoming messages.
 You'll therefore need to write a little logic to handle the differences if
 the use cases requires that.
 
-The messaging is provided through use of a couple of [IO::Pipe](https://metacpan.org/pod/IO::Pipe) objects per
+The messaging is provided through use of a couple of [IO::Pipe](https://metacpan.org/pod/IO%3A%3APipe) objects per
 child. The messaging is simple, limited, but fast. If you need something better,
 you'll need to construct it yourself, or perhaps consider something like ZeroMQ.
 
 # SEE ALSO
 
-[Daemon::Control](https://metacpan.org/pod/Daemon::Control), [IO::Pipe](https://metacpan.org/pod/IO::Pipe).
+[Daemon::Control](https://metacpan.org/pod/Daemon%3A%3AControl), [IO::Pipe](https://metacpan.org/pod/IO%3A%3APipe).
 
 You can also look for additional information at:
 
 - [GitHub](https://github.com/gryphonshafer/Daemon-Device)
-- [CPAN](http://search.cpan.org/dist/Daemon-Device)
 - [MetaCPAN](https://metacpan.org/pod/Daemon::Device)
-- [AnnoCPAN](http://annocpan.org/dist/Daemon-Device)
-- [Travis CI](https://travis-ci.org/gryphonshafer/Daemon-Device)
-- [Coveralls](https://coveralls.io/r/gryphonshafer/Daemon-Device)
+- [GitHub Actions](https://github.com/gryphonshafer/Daemon-Device/actions)
+- [Codecov](https://codecov.io/gh/gryphonshafer/Daemon-Device)
 - [CPANTS](http://cpants.cpanauthors.org/dist/Daemon-Device)
 - [CPAN Testers](http://www.cpantesters.org/distro/D/Daemon-Device.html)
 
@@ -414,7 +412,7 @@ Gryphon Shafer <gryphon@cpan.org>
 
 # COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2018 by Gryphon Shafer.
+This software is copyright (c) 2021 by Gryphon Shafer.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
