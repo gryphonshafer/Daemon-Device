@@ -325,8 +325,8 @@ __END__
 =begin :badges
 
 =for markdown
-[![Build Status](https://travis-ci.org/gryphonshafer/Daemon-Device.svg)](https://travis-ci.org/gryphonshafer/Daemon-Device)
-[![Coverage Status](https://coveralls.io/repos/gryphonshafer/Daemon-Device/badge.png)](https://coveralls.io/r/gryphonshafer/Daemon-Device)
+[![build](https://github.com/gryphonshafer/Daemon-Device/workflows/build/badge.svg)](https://github.com/gryphonshafer/Daemon-Device/actions?query=workflow%3Abuild)
+[![codecov](https://codecov.io/gh/gryphonshafer/Daemon-Device/graph/badge.svg)](https://codecov.io/gh/gryphonshafer/Daemon-Device)
 
 =end :badges
 
@@ -723,8 +723,8 @@ You can also look for additional information at:
 =for :list
 * L<GitHub|https://github.com/gryphonshafer/Daemon-Device>
 * L<MetaCPAN|https://metacpan.org/pod/Daemon::Device>
-* L<Travis CI|https://travis-ci.org/gryphonshafer/Daemon-Device>
-* L<Coveralls|https://coveralls.io/r/gryphonshafer/Daemon-Device>
+* L<GitHub Actions|https://github.com/gryphonshafer/Daemon-Device/actions>
+* L<Codecov|https://codecov.io/gh/gryphonshafer/Daemon-Device>
 * L<CPANTS|http://cpants.cpanauthors.org/dist/Daemon-Device>
 * L<CPAN Testers|http://www.cpantesters.org/distro/D/Daemon-Device.html>
 
