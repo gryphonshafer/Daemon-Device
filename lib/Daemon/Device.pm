@@ -325,7 +325,7 @@ __END__
 =begin :badges
 
 =for markdown
-[![build](https://github.com/gryphonshafer/Daemon-Device/workflows/build/badge.svg)](https://github.com/gryphonshafer/Daemon-Device/actions?query=workflow%3Abuild)
+[![test](https://github.com/gryphonshafer/Daemon-Device/workflows/test/badge.svg)](https://github.com/gryphonshafer/Daemon-Device/actions?query=workflow%3Atest)
 [![codecov](https://codecov.io/gh/gryphonshafer/Daemon-Device/graph/badge.svg)](https://codecov.io/gh/gryphonshafer/Daemon-Device)
 
 =end :badges
