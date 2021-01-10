@@ -1,6 +1,8 @@
 Revision history for Daemon::Device
 
 {{$NEXT}}
+
+1.09      2021-01-10 14:39:41-08:00 America/Los_Angeles
         - Migrate to Test2::V0
         - Improve .gitignore file
         - License migrate to Artistic 2.0
