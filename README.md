@@ -4,7 +4,7 @@ Daemon::Device - Forking daemon device construct
 
 # VERSION
 
-version 1.11
+version 1.12
 
 [![test](https://github.com/gryphonshafer/Daemon-Device/workflows/test/badge.svg)](https://github.com/gryphonshafer/Daemon-Device/actions?query=workflow%3Atest)
 [![codecov](https://codecov.io/gh/gryphonshafer/Daemon-Device/graph/badge.svg)](https://codecov.io/gh/gryphonshafer/Daemon-Device)
@@ -408,7 +408,7 @@ You can also look for additional information at:
 
 # AUTHOR
 
-Gryphon Shafer <gryphon@cpan.org>
+Gryphon Shafer <gryphon@goldenguru.com>
 
 # COPYRIGHT AND LICENSE
 
